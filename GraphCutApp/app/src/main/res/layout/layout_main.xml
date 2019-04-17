@@ -5,7 +5,7 @@
     android:layout_height="match_parent">
 
     <LinearLayout
-        android:id="@+id/ll"
+        android:id="@+id/line1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
@@ -17,24 +17,52 @@
             android:text="加载图片"/>
 
         <Button
-            android:id="@+id/CV_button"
+            android:id="@+id/Start"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="使用OPENCV处理"/>
+            android:text="处理"/>
 
         <Button
-            android:id="@+id/Source_button"
+        android:id="@+id/Source_button"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="查看原图"/>
+
+        <Button
+            android:id="@+id/Grey_button"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="查看原图"/>
+            android:text="灰度图"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/line2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/line1">
+
+        <Button
+            android:id="@+id/SignObject"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="标记前景点"/>
+
+        <Button
+            android:id="@+id/SignBackground"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="标记背景点"/>
     </LinearLayout>
 
     <ImageView
         android:id="@+id/ImageArea"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/ll"/>
+        android:layout_below="@id/line2"/>
 
 </RelativeLayout>

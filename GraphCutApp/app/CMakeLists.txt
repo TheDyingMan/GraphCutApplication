@@ -29,6 +29,15 @@ add_library( # Sets the name of the library.
              src/main/cpp/convertToGrey.cpp )
 
 add_library( # Sets the name of the library.
+             GraphCutImplement
+
+             # Sets the library as a shared library.
+             SHARED
+
+             # Provides a relative path to your source file(s).
+             src/main/cpp/GraphCutImplement.cpp )
+
+add_library( # Sets the name of the library.
              GraphCut
 
              # Sets the library as a shared library.
@@ -69,7 +78,14 @@ target_link_libraries( # Specifies the target library.
                        ${log-lib} )
 
 target_link_libraries( # Specifies the target library.
-                       GraphCut
+                       GraphCutImplement
+
+                       # Links the target library to the log library
+                       # included in the NDK.
+                       ${log-lib} )
+
+target_link_libraries( # Specifies the target library.
+                       GraphCut GraphCutImplement
 
                        # Links the target library to the log library
                        # included in the NDK.
@@ -107,7 +123,14 @@ target_link_libraries( # Specifies the target library.
                        ${log-lib} )
 
 target_link_libraries( # Specifies the target library.
-                       GraphCut android log -ljnigraphics libopencv_java4
+                       GraphCutImplement android log -ljnigraphics libopencv_java4
+
+                       # Links the target library to the log library
+                       # included in the NDK.
+                       ${log-lib} )
+
+target_link_libraries( # Specifies the target library.
+                       GraphCut android log -ljnigraphics libopencv_java4 GraphCutImplement
 
                        # Links the target library to the log library
                        # included in the NDK.

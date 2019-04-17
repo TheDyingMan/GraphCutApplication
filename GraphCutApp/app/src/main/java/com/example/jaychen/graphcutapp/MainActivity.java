@@ -7,9 +7,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
-import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
-import android.os.FileUriExposedException;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -19,7 +17,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.FileNotFoundException;
@@ -29,9 +26,14 @@ public class MainActivity extends AppCompatActivity
 
      //Used to load the 'native-lib' library on application startup.
     static {
+        System.loadLibrary("GraphCut");
         System.loadLibrary("convertToGrey");
+        System.loadLibrary("GraphCutImplement");
     }
+    public native int[] GraphCut(int[] buf, int w, int h);
     public native int[] Cvt2Grey(int[] buf, int w, int h);
+    public native void AddObjectPoint( int x, int y);
+    public native void AddBackgroundPoint( int x, int y);
 //
 //    @Override
 //    protected void onCreate(Bundle savedInstanceState) {
@@ -55,10 +57,13 @@ public class MainActivity extends AppCompatActivity
     ImageView imgView;
     Button ChosseImage;
     Button Source_button, CV_button;
-
+    Button SignObject,SignBackground;
+    Button Start;
+    Button Grey_button;
 
     private Bitmap ImageInScreen;//经过屏幕适应的缩放后的图片
     private Bitmap HandleImage;//图片副本
+    private Bitmap GreyImage;//图片的灰度图
     private Canvas canvas;//画布
     private Paint paint;//画笔
 
@@ -66,6 +71,8 @@ public class MainActivity extends AppCompatActivity
     private float downy = 0; //开始按下的点的y
     private float x = 0; //当前划过的点的x
     private float y = 0; //当前划过的点的y
+
+    private boolean isObject=true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
@@ -77,11 +84,21 @@ public class MainActivity extends AppCompatActivity
         ChosseImage = (Button) this.findViewById(R.id.LoadImage);
         CV_button = (Button) this.findViewById(R.id.CV_button);
         Source_button = (Button) this.findViewById(R.id.Source_button);
+        SignObject=(Button) this.findViewById(R.id.SignObject);
+        SignBackground=(Button) this.findViewById(R.id.SignBackground);
+        Start=(Button)this.findViewById(R.id.Start);
         imgView = (ImageView) this.findViewById(R.id.ImageArea);
+        Grey_button=(Button) this.findViewById(R.id.Grey_button);
 
         ChosseImage.setOnClickListener(new ClickEvent());
+        SignObject.setOnClickListener(new ClickEvent());
+        SignBackground.setOnClickListener(new ClickEvent());
+        Start.setOnClickListener(new ClickEvent());
+        Grey_button.setOnClickListener(new ClickEvent());
+        Source_button.setOnClickListener(new ClickEvent());
     }
 
+    //处理各种点击事件
     class ClickEvent implements View.OnClickListener
     {
         public void onClick(View button)
@@ -91,7 +108,48 @@ public class MainActivity extends AppCompatActivity
                 Toast.makeText(getApplicationContext(), "点击加载图片按钮", Toast.LENGTH_SHORT).show();
                 choose(ChosseImage);
             }
+            else if(button==SignObject)
+            {
+                Toast.makeText(getApplicationContext(), "点击标记前景点按钮", Toast.LENGTH_SHORT).show();
+                signObject(SignObject);
+            }
+            else if(button==SignBackground)
+            {
+                Toast.makeText(getApplicationContext(), "点击标记背景点按钮", Toast.LENGTH_SHORT).show();
+                signBackground(SignBackground);
+            }
+            else if(button==Start)
+            {
+                Toast.makeText(getApplicationContext(), "点击开始处理按钮", Toast.LENGTH_SHORT).show();
+
+                int[] srcImageData = new int[ImageInScreen.getWidth() * ImageInScreen.getHeight()];
+                ImageInScreen.getPixels(srcImageData, 0, ImageInScreen.getWidth(), 0, 0, ImageInScreen.getWidth(), ImageInScreen.getHeight());
+                int[] resultInt = GraphCut(srcImageData, ImageInScreen.getWidth(), ImageInScreen.getHeight());
+                Bitmap resultImg = Bitmap.createBitmap(ImageInScreen.getWidth(), ImageInScreen.getHeight(), Bitmap.Config.ARGB_8888);
+                resultImg.setPixels(resultInt, 0, ImageInScreen.getWidth(), 0, 0, ImageInScreen.getWidth(), ImageInScreen.getHeight());
+            }
+            else if(button==Grey_button)
+            {
+                Toast.makeText(getApplicationContext(), "查看灰度图片", Toast.LENGTH_SHORT).show();
+                imgView.setImageBitmap(GreyImage);
+            }
+            else if(button==Source_button)
+            {
+                imgView.setImageBitmap(ImageInScreen);
+            }
         }
+    }
+
+    //选择标记前景点
+    public void signObject(View view)
+    {
+        isObject=true;
+    }
+
+    //选择标记背景点
+    public void signBackground(View view)
+    {
+        isObject=false;
     }
 
     // 选择图片
@@ -114,7 +172,7 @@ public class MainActivity extends AppCompatActivity
         float ImageWidth; //图片的宽
 
         //构造函数
-        MyTouchListener(AppCompatActivity activity, float ImageHeight, float ImageWidth)
+        MyTouchListener(AppCompatActivity activity, float ImageHeight, float ImageWidth,Paint paint)
         {
             this.activity = activity;
             this.ImageHeight = ImageHeight;
@@ -141,6 +199,19 @@ public class MainActivity extends AppCompatActivity
 //                    logText=String.format("X:%f,Y:%f",downx,downy);
 //                    Toast.makeText(activity.getApplicationContext(), logText, Toast.LENGTH_SHORT).show();
 //                    Log.e("x-y", event.getX() + "" + event.getY());
+                    Log.e("x-y", downx + "-" + downy);
+                    if(isObject)
+                    {
+                        //添加前景点
+                        paint.setColor(Color.GREEN);
+                        AddObjectPoint((int)x,(int)y);
+                    }
+                    else
+                    {
+                        //添加背景点
+                        paint.setColor(Color.BLUE);
+                        AddBackgroundPoint((int)x,(int)y);
+                    }
                     break;
                 // 移动
                 case MotionEvent.ACTION_MOVE:
@@ -153,7 +224,19 @@ public class MainActivity extends AppCompatActivity
                     imgView.invalidate();
                     downx = x;
                     downy = y;
-//                    Log.e("x-y", downx + "-" + downy);
+                    Log.e("x-y", downx + "-" + downy);
+                    if(isObject)
+                    {
+                        //添加前景点
+                        paint.setColor(Color.GREEN);
+                        AddObjectPoint((int)x,(int)y);
+                    }
+                    else
+                    {
+                        //添加背景点
+                        paint.setColor(Color.BLUE);
+                        AddBackgroundPoint((int)x,(int)y);
+                    }
                     break;
                 case MotionEvent.ACTION_UP:
                     break;
@@ -168,6 +251,7 @@ public class MainActivity extends AppCompatActivity
 
     }
 
+    //在用户选择完图片之后
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data)
     {
@@ -216,27 +300,34 @@ public class MainActivity extends AppCompatActivity
                     // 创建缩放后的图片副本
                     HandleImage = Bitmap.createBitmap(ImageInScreen.getWidth(),
                             ImageInScreen.getHeight(), ImageInScreen.getConfig());
-//                    // 创建画布
-//                    canvas = new Canvas(HandleImage);
-//                    // 创建画笔
-//                    paint = new Paint();
-//                    // 设置画笔颜色
-//                    paint.setColor(Color.GREEN);
-//                    // 设置画笔宽度
-//                    paint.setStrokeWidth(20);
-//                    // 开始作画，把原图的内容绘制在白纸上
-//                    canvas.drawBitmap(ImageInScreen, new Matrix(), paint);
+                    // 创建画布
+                    canvas = new Canvas(HandleImage);
+                    // 创建画笔
+                    paint = new Paint();
+                    // 设置画笔颜色
+                    if(isObject)
+                    {
+                        paint.setColor(Color.GREEN);
+                    }
+                    else
+                    {
+                        paint.setColor(Color.BLUE);
+                    }
+                    // 设置画笔宽度
+                    paint.setStrokeWidth(20);
+                    // 开始作画，把原图的内容绘制在白纸上
+                    canvas.drawBitmap(ImageInScreen, new Matrix(), paint);
 
                     int[] srcImageData=new int[ImageInScreen.getWidth()*ImageInScreen.getHeight()];
                     ImageInScreen.getPixels(srcImageData,0,ImageInScreen.getWidth(),0,0,ImageInScreen.getWidth(),ImageInScreen.getHeight());
                     int[] resultInt = Cvt2Grey(srcImageData, ImageInScreen.getWidth(),ImageInScreen.getHeight());
-                    Bitmap resultImg = Bitmap.createBitmap(ImageInScreen.getWidth(),ImageInScreen.getHeight(), Bitmap.Config.ARGB_8888);
-                    resultImg.setPixels(resultInt,0,ImageInScreen.getWidth(),0,0,ImageInScreen.getWidth(),ImageInScreen.getHeight());
+                    GreyImage=Bitmap.createBitmap(ImageInScreen.getWidth(),ImageInScreen.getHeight(),Bitmap.Config.ARGB_8888);
+                    GreyImage.setPixels(resultInt,0,ImageInScreen.getWidth(),0,0,ImageInScreen.getWidth(),ImageInScreen.getHeight());
 
                     // 将处理后的图片放入imageview中
-                    imgView.setImageBitmap(resultImg);
+                    imgView.setImageBitmap(HandleImage);
                     // 设置imageview监听
-//                    imgView.setOnTouchListener(new MyTouchListener(this, ImageInScreen.getHeight(), ImageInScreen.getWidth()));
+                    imgView.setOnTouchListener(new MyTouchListener(this, ImageInScreen.getHeight(), ImageInScreen.getWidth(),paint));
 
                 } catch (FileNotFoundException e)
                 {

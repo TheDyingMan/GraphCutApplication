@@ -1,5 +1,7 @@
 #include <jni.h>
 #include <opencv2/opencv.hpp>
+
+#include "GraphCutImplement.cpp"
 using namespace cv;
 
 extern "C"
@@ -24,7 +26,8 @@ extern "C"
         //将int数组类型转化成Mat类型
         Mat myImg(height,width,CV_8UC4,(unsigned char*)inputImageDatabuf);
 
-
+        Mat* myImgPtr=&myImg;
+        BuildGraph(myImgPtr,width,height);
 
 
         //将处理完的图片输出
